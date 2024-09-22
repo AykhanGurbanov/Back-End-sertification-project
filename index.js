@@ -1,76 +1,63 @@
-// index.js
-// where your node app starts
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const isUrl = require('is-url');
 
-// init project
-var express = require('express');
-var bodyParser = require('body-parser');
-var app = express();
-var unix = require('unix-timestamp')
-// enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
-// so that your API is remotely testable by FCC 
-var cors = require('cors');
-app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
-app.use(bodyParser.urlencoded({extends: false}));
-app.use(bodyParser.json());
-// http://expressjs.com/en/starter/static-files.html
-app.use(express.static('public'));
+// Basic Configuration
+const port = process.env.PORT || 3000;
 
-// http://expressjs.com/en/starter/basic-routing.html
-app.get("/", function (req, res) {
-  res.sendFile(__dirname + '/views/index.html');
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+app.use('/public', express.static(`${process.cwd()}/public`));
+
+let urlDatabase = {};
+let urlCounter = 1;
+
+app.get('/', function(req, res) {
+  res.sendFile(process.cwd() + '/views/index.html');
+});
+
+// Your first API endpoint
+app.get('/api/hello', function(req, res) {
+  res.json({ greeting: 'hello API' });
 });
 
 
-// your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
-});
-
-
-app.get("/api", (req, res, next) => {
-  req.timestamp = unix.now()
-  next();
-},(req, res,next)=>{
-  req.timestam = new Date().toUTCString();
-  next();
-},(req,res)=>{
-  res.json({
-    "unix": req.timestamp*1000,
-    "utc": req.timestam
-  })
-});
-
-app.get("/api/:number",(req, res) => {
-  const { number }  = req.params;
-  try{
-    if (number >= 13){
-      req.timestam = new Date(parseInt(number)).toUTCString();
-      if(req.timestam == "Invalid Date"){
-        res.json({error : "Invalid Date"})
-      }
-      res.json({
-      "unix": parseInt(number),
-      "utc": req.timestam
+app.post('/api/shorturl', (req, res) =>{
+  const originalUrl = req.body.url
+  const shortUrl = urlCounter++; // Generate short URL as a number (incremented)
+  urlDatabase[shortUrl] = originalUrl;
+  if( isUrl(req.body.url)){
+    res.json({
+      "original_url": originalUrl,
+      "short_url": shortUrl
     })
-    }else{
-      req.timestamp = unix.fromDate(number)
-      req.timestam = new Date(req.timestamp * 1000).toUTCString();
-      if(req.timestam == "Invalid Date"){
-        res.json({error : "Invalid Date"})
-      }
-      res.json({
-        "unix": req.timestamp*1000,
-        "utc": req.timestam
-      })
-    }
-  }catch(err) {
-    if( err == "Invalid Date" ){
-      res.json({error : "Invalid Date"})
-    }
-  }  
+  }else{
+    res.json({"error":"Invalid URL"})
+  }
 });
 
-// Listen on port set in environment variable or default to 3000
-var listener = app.listen(process.env.PORT || 3000, function () {
-  console.log('Your app is listening on port ' + listener.address().port);
+app.get('/api/shorturl/:number',(req, res) =>{
+  const { number } = req.params
+  const originalUrl = urlDatabase[number]
+  if ( originalUrl ){
+    return res.redirect(originalUrl)
+  }else{
+    res.json({"error":"Invalid URL"})
+  }
+})
+
+/*
+// API POST method
+app.post('/name', (req, res) =>{
+  res.json({
+      name: req.body.first + " " + req.body.last
+  });
+});
+*/
+
+app.listen(port, function() {
+  console.log(`Listening on port ${port} sucsessfully`);
 });
