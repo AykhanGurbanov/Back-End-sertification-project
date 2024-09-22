@@ -26,49 +26,14 @@ app.get("/api/hello", function (req, res) {
   res.json({greeting: 'hello API'});
 });
 
-
-app.get("/api", (req, res, next) => {
-  req.timestamp = unix.now()
-  next();
-},(req, res,next)=>{
-  req.timestam = new Date().toUTCString();
-  next();
-},(req,res)=>{
+app.get('/api/whoami', (req, res)=>{
   res.json({
-    "unix": req.timestamp*1000,
-    "utc": req.timestam
+    "ipaddress": req.ip,
+    "language": req.headers["accept-language"],
+    "software": req.headers["user-agent"]
   })
-});
+})
 
-app.get("/api/:number",(req, res) => {
-  const { number }  = req.params;
-  try{
-    if (number >= 13){
-      req.timestam = new Date(parseInt(number)).toUTCString();
-      if(req.timestam == "Invalid Date"){
-        res.json({error : "Invalid Date"})
-      }
-      res.json({
-      "unix": parseInt(number),
-      "utc": req.timestam
-    })
-    }else{
-      req.timestamp = unix.fromDate(number)
-      req.timestam = new Date(req.timestamp * 1000).toUTCString();
-      if(req.timestam == "Invalid Date"){
-        res.json({error : "Invalid Date"})
-      }
-      res.json({
-        "unix": req.timestamp*1000,
-        "utc": req.timestam
-      })
-    }
-  }catch(err) {
-    if( err == "Invalid Date" ){
-      res.json({error : "Invalid Date"})
-    }
-  }  
-});
 
 // Listen on port set in environment variable or default to 3000
 var listener = app.listen(process.env.PORT || 3000, function () {
